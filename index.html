@@ -242,6 +242,55 @@
     .btn-done { background: var(--orange); color: #fff; }
     .btn-done:hover { background: #c0622a; }
 
+    /* ── Name screen ── */
+    .name-screen {
+      position: fixed; inset: 0;
+      background: var(--green);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 300;
+      padding: 32px;
+      color: #fff;
+      animation: pop 0.22s ease;
+    }
+    .ns-icon { font-size: 4rem; margin-bottom: 16px; }
+    .name-screen h2 { font-size: 1.9rem; font-weight: 900; margin-bottom: 8px; text-align: center; }
+    .name-screen p  { font-size: 0.9rem; opacity: 0.8; margin-bottom: 32px; text-align: center; }
+    .name-input {
+      width: 100%; max-width: 340px;
+      padding: 15px 20px;
+      border: none; border-radius: 12px;
+      font-size: 1.1rem; font-weight: 600;
+      text-align: center;
+      outline: none;
+      margin-bottom: 14px;
+      color: var(--text);
+    }
+    .name-input::placeholder { color: #bbb; font-weight: 400; }
+    .name-btn {
+      width: 100%; max-width: 340px;
+      padding: 15px;
+      background: rgba(255,255,255,0.2);
+      border: 2px solid rgba(255,255,255,0.5);
+      color: #fff;
+      border-radius: 12px;
+      font-size: 1rem; font-weight: 800;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .name-btn:hover { background: rgba(255,255,255,0.35); }
+
+    /* Name chip in header */
+    .hdr-name-chip {
+      font-size: 0.78rem; font-weight: 700;
+      background: rgba(255,255,255,0.18);
+      border: none; color: #fff;
+      padding: 6px 12px; border-radius: 7px;
+      cursor: pointer; white-space: nowrap;
+      max-width: 120px; overflow: hidden; text-overflow: ellipsis;
+    }
+    .hdr-name-chip:hover { background: rgba(255,255,255,0.3); }
+
     /* ── Toast ── */
     .toast {
       position: fixed; bottom: 20px; left: 50%;
@@ -267,6 +316,7 @@
     <p id="hdrSub">0 of 200 categories set</p>
   </div>
   <div class="hdr-btns">
+    <button class="hdr-name-chip" id="hdrNameChip" onclick="editName()" title="Edit your name"></button>
     <button class="hdr-btn" onclick="exportPrefs()">Export</button>
     <button class="hdr-btn" onclick="resetAll()">Reset</button>
   </div>
@@ -694,28 +744,77 @@ for (const g of groups) {
 
 // State
 let prefs = {};
+let userName = '';
 let view = 'summary'; // 'summary' | 'detail'
 let detailIndex = 0;
 
 function loadPrefs() {
   try { prefs = JSON.parse(localStorage.getItem('foodPrefs2') || '{}'); } catch(e) {}
+  userName = localStorage.getItem('foodUserName') || '';
 }
 function savePrefs() {
   localStorage.setItem('foodPrefs2', JSON.stringify(prefs));
+}
+function saveName(name) {
+  userName = name;
+  localStorage.setItem('foodUserName', userName);
 }
 function countSet() { return allCats.filter(c => prefs[c.id]).length; }
 
 // ── Render ────────────────────────────────────────────────────────────────
 function render() {
+  if (!userName) { renderNameScreen(); return; }
   updateHeader();
   if (view === 'summary') renderSummary();
   else renderDetail();
+}
+
+function renderNameScreen() {
+  document.getElementById('searchContainer').style.display = 'none';
+  document.getElementById('app').innerHTML = '';
+  // Remove any existing overlay first
+  document.getElementById('nameOverlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'nameOverlay';
+  overlay.className = 'name-screen';
+  overlay.innerHTML = `
+    <div class="ns-icon">🛒</div>
+    <h2>Food Preferences</h2>
+    <p>Track your favourite brands across 200+<br>supermarket categories.</p>
+    <input class="name-input" id="nameInput" type="text" placeholder="Enter your name" maxlength="40" autocomplete="given-name">
+    <button class="name-btn" onclick="submitName()">Get Started →</button>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('nameInput').focus(), 80);
+  document.getElementById('nameInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitName();
+  });
+}
+
+function submitName() {
+  const val = (document.getElementById('nameInput')?.value || '').trim();
+  if (!val) { document.getElementById('nameInput')?.focus(); return; }
+  saveName(val);
+  document.getElementById('nameOverlay')?.remove();
+  render();
+}
+
+function editName() {
+  const newName = prompt('Edit your name:', userName);
+  if (newName !== null && newName.trim()) {
+    saveName(newName.trim());
+    updateHeader();
+    toast('Name updated');
+  }
 }
 
 function updateHeader() {
   const n = countSet();
   const total = allCats.length;
   document.getElementById('hdrSub').textContent = `${n} of ${total} categories set`;
+  const chip = document.getElementById('hdrNameChip');
+  if (chip) chip.textContent = `✏ ${userName}`;
   const pct = n / total;
   document.getElementById('progFill').style.width = (pct * 100) + '%';
   const circ = 2 * Math.PI * 18; // 113.1
@@ -860,11 +959,16 @@ function resetAll() {
 }
 
 function exportPrefs() {
-  const lines = allCats.map(c => {
-    const p = prefs[c.id];
-    const label = p === SPECIAL ? 'Whatever is on special' : (p || 'Not set');
-    return `${c.groupName} — ${c.name}: ${label}`;
-  });
+  const lines = [
+    `Food Preferences — ${userName}`,
+    `Generated: ${new Date().toLocaleDateString()}`,
+    '',
+    ...allCats.map(c => {
+      const p = prefs[c.id];
+      const label = p === SPECIAL ? 'Whatever is on special' : (p || 'Not set');
+      return `${c.groupName} — ${c.name}: ${label}`;
+    })
+  ];
   const text = lines.join('\n');
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(() => toast('Copied to clipboard!'));
