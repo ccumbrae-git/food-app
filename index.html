@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Food Preferences — Your Brand Choices</title>
+  <meta name="description" content="Track your supermarket brand preferences across 200 food categories. Save your go-to brands for pasta, cheese, bread, meat, snacks and more.">
+  <meta name="theme-color" content="#2d6a4f">
+
+  <!-- Open Graph (link previews) -->
+  <meta property="og:title" content="Food Preferences">
+  <meta property="og:description" content="Track your supermarket brand preferences across 200 food categories.">
+  <meta property="og:type" content="website">
+
+  <!-- Emoji favicon via SVG -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #2d6a4f;
+      --green-light: #52b788;
+      --green-bg: #e8f5e9;
+      --orange: #e07b39;
+      --orange-bg: #fff3e0;
+      --bg: #f3f4f2;
+      --card: #ffffff;
+      --border: #e2e4e0;
+      --text: #1a1a1a;
+      --muted: #777;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.4;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--green);
+      color: #fff;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    header .title { flex: 1; }
+    header h1 { font-size: 1.1rem; font-weight: 800; }
+    header p  { font-size: 0.75rem; opacity: 0.75; }
+    .progress-ring { width: 42px; height: 42px; flex-shrink: 0; }
+    .progress-ring circle { fill: none; stroke-width: 4; }
+    .progress-ring .track { stroke: rgba(255,255,255,0.25); }
+    .progress-ring .fill  { stroke: #fff; stroke-linecap: round; transition: stroke-dashoffset 0.4s ease; transform: rotate(-90deg); transform-origin: 50% 50%; }
+
+    .hdr-btns { display: flex; gap: 8px; }
+    .hdr-btn {
+      background: rgba(255,255,255,0.18);
+      border: none;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .hdr-btn:hover { background: rgba(255,255,255,0.3); }
+
+    /* ── Progress bar ── */
+    .prog-bar { height: 3px; background: #c8e6c9; }
+    .prog-fill { height: 100%; background: var(--green-light); transition: width 0.4s ease; }
+
+    /* ── Search bar ── */
+    .search-wrap {
+      padding: 12px 16px 0;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 10px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.9rem;
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-wrap input:focus { border-color: var(--green-light); }
+
+    /* ── Summary ── */
+    #app { max-width: 900px; margin: 0 auto; padding: 12px 16px 80px; }
+
+    .group-label {
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      padding: 16px 0 6px;
+    }
+
+    .cat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 8px;
+    }
+
+    .cat-tile {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      cursor: pointer;
+      transition: transform 0.12s, border-color 0.15s, box-shadow 0.15s;
+      user-select: none;
+    }
+    .cat-tile:hover { transform: translateY(-2px); border-color: var(--green-light); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .cat-tile.is-set { border-color: #a5d6a7; }
+    .cat-tile.is-special { border-color: #ffc87a; }
+
+    .cat-tile .t-emoji { font-size: 1.4rem; }
+    .cat-tile .t-name  { font-size: 0.8rem; font-weight: 700; margin: 4px 0 2px; line-height: 1.2; }
+    .cat-tile .t-pick  { font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cat-tile.is-set   .t-pick { color: var(--green); font-weight: 600; }
+    .cat-tile.is-special .t-pick { color: var(--orange); font-weight: 600; }
+
+    .no-results { text-align: center; padding: 60px 0; color: #bbb; font-size: 0.95rem; }
+
+    /* ── Category detail ── */
+    .detail-view { animation: pop 0.18s ease; }
+    @keyframes pop { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+    .detail-nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 16px;
+    }
+    .btn-back {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      color: #555;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 0.83rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-back:hover { background: #f0f0f0; }
+    .nav-counter { font-size: 0.8rem; color: var(--muted); margin-left: auto; }
+
+    .detail-head { margin-bottom: 20px; }
+    .detail-head .d-emoji { font-size: 2.2rem; }
+    .detail-head .d-name  { font-size: 1.5rem; font-weight: 900; margin: 4px 0 2px; }
+    .detail-head .d-group { font-size: 0.8rem; color: var(--muted); }
+
+    /* Brand grid */
+    .brand-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 500px) { .brand-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .brand-tile {
+      background: var(--card);
+      border: 2.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-height: 80px;
+      transition: border-color 0.12s, background 0.12s, transform 0.1s;
+      user-select: none;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .brand-tile:hover { border-color: var(--green-light); background: #f6fdf9; transform: scale(1.02); }
+    .brand-tile.selected {
+      border-color: var(--green);
+      background: var(--green-bg);
+      color: var(--green);
+    }
+    .brand-tile.selected::after {
+      content: '✓';
+      display: block;
+      margin-top: 6px;
+      font-size: 1rem;
+      color: var(--green);
+    }
+
+    .brand-tile.special-tile {
+      border-style: dashed;
+      border-color: #ffc87a;
+      color: #c07820;
+      font-size: 0.82rem;
+      background: #fffcf5;
+    }
+    .brand-tile.special-tile:hover { background: var(--orange-bg); border-color: var(--orange); border-style: solid; }
+    .brand-tile.special-tile.selected {
+      border-color: var(--orange);
+      border-style: solid;
+      background: var(--orange-bg);
+      color: var(--orange);
+    }
+    .brand-tile.special-tile.selected::after { color: var(--orange); }
+    .brand-tile.special-tile .sp-icon { font-size: 1.2rem; margin-bottom: 4px; }
+
+    .detail-nav-btns {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    .btn-pn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-pn:disabled { opacity: 0.3; cursor: default; }
+    .btn-prev { background: #e8e8e8; color: #444; }
+    .btn-next { background: var(--green); color: #fff; }
+    .btn-next:hover:not(:disabled) { background: #245c42; }
+    .btn-done { background: var(--orange); color: #fff; }
+    .btn-done:hover { background: #c0622a; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 20px; left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: #1a1a1a; color: #fff;
+      padding: 9px 18px; border-radius: 8px;
+      font-size: 0.82rem; font-weight: 600;
+      opacity: 0; transition: transform 0.25s, opacity 0.25s;
+      z-index: 200; pointer-events: none; white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <svg class="progress-ring" viewBox="0 0 42 42">
+    <circle class="track" cx="21" cy="21" r="18"/>
+    <circle class="fill" id="ringFill" cx="21" cy="21" r="18" stroke-dasharray="113.1" stroke-dashoffset="113.1"/>
+  </svg>
+  <div class="title">
+    <h1>Food Preferences</h1>
+    <p id="hdrSub">0 of 200 categories set</p>
+  </div>
+  <div class="hdr-btns">
+    <button class="hdr-btn" onclick="exportPrefs()">Export</button>
+    <button class="hdr-btn" onclick="resetAll()">Reset</button>
+  </div>
+</header>
+<div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+
+<div id="searchContainer" class="search-wrap">
+  <input type="search" id="searchBox" placeholder="Search categories..." oninput="renderSummary()" autocomplete="off">
+</div>
+
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SPECIAL = '__special__';
+const SPECIAL_LABEL = "Whatever's on special";
+
+// ── Data ──────────────────────────────────────────────────────────────────
+const groups = [
+  {
+    name: 'Pasta & Grains', emoji: '🌾',
+    cats: [
+      { id:'pasta_dry',    name:'Pasta (Dried)',          brands:['Barilla','San Remo','De Cecco','Aldi Organic'] },
+      { id:'pasta_fett',   name:'Pasta (Fettuccine)',     brands:['Barilla','Latina Fresh','San Remo','Aldi'] },
+      { id:'rice_white',   name:'Rice (White Long Grain)',brands:['SunRice','Uncle Ben\'s','Tilda','Aldi'] },
+      { id:'rice_basmati', name:'Rice (Basmati)',         brands:['SunRice','Maharani','Tilda','Aldi'] },
+      { id:'rice_brown',   name:'Rice (Brown)',           brands:['SunRice','Doongara','Coles Brand','Aldi'] },
+      { id:'rice_arborio', name:'Rice (Arborio/Risotto)', brands:['SunRice','Riso Gallo','Coles Brand','Aldi'] },
+      { id:'egg_noodles',  name:'Egg Noodles',            brands:['San Remo','Chang\'s','Fantastic','Aldi'] },
+      { id:'rice_noodles', name:'Rice Noodles',           brands:['Chang\'s','Fantastic','Trident','Aldi'] },
+      { id:'rolled_oats',  name:'Rolled Oats',            brands:['Uncle Tobys','Lowan','Woolworths Brand','Aldi'] },
+      { id:'quinoa',       name:'Quinoa',                 brands:['Ceres Organics','Harris Farm','Coles Brand','Aldi'] },
+    ]
+  },
+  {
+    name: 'Bread & Bakery', emoji: '🍞',
+    cats: [
+      { id:'bread_white',    name:'White Sandwich Bread',  brands:['Tip Top','Wonder White','Helga\'s','Coles Brand'] },
+      { id:'bread_wholemeal',name:'Wholemeal Bread',        brands:['Helga\'s','Abbott\'s Village','Tip Top','Wonder White'] },
+      { id:'bread_multigrain',name:'Multigrain Bread',     brands:['Helga\'s','Abbott\'s Village','Burgen','Tip Top'] },
+      { id:'bread_sour',     name:'Sourdough Bread',       brands:['Bakers Delight','Brumby\'s','Coles Bakery','Aldi Specially Selected'] },
+      { id:'wraps',          name:'Wraps / Tortillas',     brands:['Mission','Old El Paso','Coles Brand','Aldi'] },
+      { id:'eng_muffins',    name:'English Muffins',       brands:['Tip Top','Thomas\'','Coles Brand','Woolworths Brand'] },
+      { id:'crumpets',       name:'Crumpets',              brands:['Tip Top','Thomas\'','Coles Brand','Golden'] },
+      { id:'pita',           name:'Pita Bread',            brands:['Mission','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'bagels',         name:'Bagels',                brands:['Bakers Delight','Coles Bakery','Woolworths Bakery','Aldi'] },
+      { id:'crackers',       name:'Savoury Crackers',      brands:['Jatz','Vita-Weat','Ryvita','Salada'] },
+    ]
+  },
+  {
+    name: 'Dairy — Milk', emoji: '🥛',
+    cats: [
+      { id:'milk_full',   name:'Full Cream Milk',      brands:['Pauls','Devondale','Harvey Fresh','Woolworths Brand'] },
+      { id:'milk_reduced',name:'Reduced Fat Milk',     brands:['Pauls','Devondale','Harvey Fresh','Coles Brand'] },
+      { id:'milk_skim',   name:'Skim Milk',            brands:['Pauls','Devondale','Harvey Fresh','Coles Brand'] },
+      { id:'milk_lf',     name:'Lactose Free Milk',    brands:['Liddells','Devondale','Pauls Zymil','Coles Brand'] },
+      { id:'milk_oat',    name:'Oat Milk',             brands:['Oatly','Vitasoy','Milklab','Woolworths Brand'] },
+      { id:'milk_almond', name:'Almond Milk',          brands:['So Good','Vitasoy','Almond Breeze','Woolworths Brand'] },
+      { id:'milk_soy',    name:'Soy Milk',             brands:['So Good','Vitasoy','Bonsoy','Woolworths Brand'] },
+      { id:'milk_uht',    name:'UHT / Long Life Milk', brands:['Devondale','Pauls','Aldi','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Dairy — Butter & Spreads', emoji: '🧈',
+    cats: [
+      { id:'butter_salted',  name:'Butter (Salted)',      brands:['Western Star','Mainland','Lurpak','Devondale'] },
+      { id:'butter_unsalted',name:'Butter (Unsalted)',    brands:['Western Star','Mainland','Lurpak','Devondale'] },
+      { id:'margarine',      name:'Margarine / Spread',   brands:['Fairy','Nuttelex','Flora','Coles Brand'] },
+      { id:'cream_cheese',   name:'Cream Cheese',         brands:['Philadelphia','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'cottage_cheese', name:'Cottage Cheese',       brands:['Woolworths Brand','Coles Brand','Dairy Farmers','Bulla'] },
+      { id:'ricotta',        name:'Ricotta',              brands:['Perfect Italiano','Lemnos','Coles Brand','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Dairy — Cheese', emoji: '🧀',
+    cats: [
+      { id:'cheese_cheddar_block',name:'Cheddar (Block)',  brands:['Bega','Cheer','Mainland','Coles Brand'] },
+      { id:'cheese_cheddar_slice',name:'Cheddar (Sliced)', brands:['Bega','Cheer','Mainland','Coles Brand'] },
+      { id:'cheese_mozz',         name:'Mozzarella',       brands:['Perfect Italiano','Bega','Coles Brand','Woolworths Brand'] },
+      { id:'cheese_parm',         name:'Parmesan (Grated)',brands:['Mil Lel','Perfect Italiano','Coles Brand','Woolworths Brand'] },
+      { id:'cheese_brie',         name:'Brie / Camembert', brands:['Jindi','King Island Dairy','Woolworths Brand','Aldi Specially Selected'] },
+      { id:'cheese_feta',         name:'Feta',             brands:['Lemnos','Dodoni','Coles Brand','Woolworths Brand'] },
+      { id:'cheese_haloumi',      name:'Haloumi',          brands:['Lemnos','Dodoni','Coles Brand','Woolworths Brand'] },
+      { id:'cheese_colby',        name:'Colby / Tasty Blend',brands:['Bega','Cheer','Coles Brand','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Dairy — Yogurt', emoji: '🫙',
+    cats: [
+      { id:'yogurt_plain',    name:'Yogurt (Plain)',     brands:['Chobani','Jalna','Farmers Union','Coles Brand'] },
+      { id:'yogurt_flavoured',name:'Yogurt (Flavoured)', brands:['Chobani','Yoplait','Vaalia','Danone'] },
+      { id:'yogurt_greek',    name:'Greek Yogurt',       brands:['Chobani','Jalna','Farmers Union','Coles Brand'] },
+      { id:'yogurt_kids',     name:'Kids Yogurt',        brands:['Vaalia','Danino','Chobani Flip','Coles Brand'] },
+    ]
+  },
+  {
+    name: 'Dairy — Cream', emoji: '🍶',
+    cats: [
+      { id:'cream_thick',  name:'Thickened Cream',  brands:['Pauls','Bulla','Coles Brand','Woolworths Brand'] },
+      { id:'cream_sour',   name:'Sour Cream',       brands:['Bulla','Dairy Farmers','Coles Brand','Woolworths Brand'] },
+      { id:'cream_cooking',name:'Cooking Cream',    brands:['Bulla','Pauls','Coles Brand','Woolworths Brand'] },
+      { id:'custard',      name:'Custard',          brands:['Pauls','Bulla','Coles Brand','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Ice Cream & Frozen Treats', emoji: '🍦',
+    cats: [
+      { id:'icecream_van',   name:'Ice Cream — Vanilla (2L)',    brands:['Streets Blue Ribbon','Bulla','Connoisseur','Coles Brand'] },
+      { id:'icecream_choc',  name:'Ice Cream — Chocolate (2L)',  brands:['Streets','Bulla','Connoisseur','Coles Brand'] },
+      { id:'icecream_bars',  name:'Ice Cream Bars / Sticks',     brands:['Streets Paddle Pop','Peters','Connoisseur','Aldi'] },
+      { id:'ice_blocks',     name:'Ice Blocks / Popsicles',      brands:['Streets','Peters','Coles Brand','Aldi'] },
+    ]
+  },
+  {
+    name: 'Eggs', emoji: '🥚',
+    cats: [
+      { id:'eggs_freerange', name:'Free Range Eggs',       brands:['Pace Farm','Sunny Queen','Woolworths Free Range','Coles Free Range'] },
+      { id:'eggs_barn',      name:'Cage Free / Barn Eggs', brands:['Pace Farm','Sunny Queen','Coles Brand','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Meat — Chicken', emoji: '🍗',
+    cats: [
+      { id:'chk_breast',   name:'Chicken Breast (Fresh)',   brands:['Inghams','Lilydale','Steggles','Coles RSPCA'] },
+      { id:'chk_thigh',    name:'Chicken Thighs (Fresh)',   brands:['Inghams','Lilydale','Steggles','Woolworths Brand'] },
+      { id:'chk_whole',    name:'Whole Chicken',            brands:['Inghams','Lilydale','Steggles','Coles Free Range'] },
+      { id:'chk_nuggets',  name:'Chicken Nuggets (Frozen)', brands:['Inghams','Steggles','Coles Brand','4\'N20'] },
+      { id:'chk_strips',   name:'Chicken Strips (Frozen)',  brands:['Inghams','Steggles','Coles Brand','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Meat — Beef', emoji: '🥩',
+    cats: [
+      { id:'beef_mince',  name:'Beef Mince',         brands:['Coles Brand','Woolworths Brand','Macro Organic','NH Foods'] },
+      { id:'beef_steak',  name:'Beef Steak',         brands:['Coles Brand','Woolworths Brand','NH Foods','Macro Organic'] },
+      { id:'beef_roast',  name:'Beef Roast',         brands:['Coles Brand','Woolworths Brand','Harvey Beef','Macro Organic'] },
+      { id:'beef_corned', name:'Corned Beef',        brands:['Woolworths Brand','Coles Brand','Bertocchi','Swickers'] },
+    ]
+  },
+  {
+    name: 'Meat — Lamb & Pork', emoji: '🫙',
+    cats: [
+      { id:'lamb_chops', name:'Lamb Chops',  brands:['Coles Brand','Woolworths Brand','Macro Organic','Spring Sheep'] },
+      { id:'lamb_mince', name:'Lamb Mince',  brands:['Coles Brand','Woolworths Brand','Macro Organic','Aldi'] },
+      { id:'pork_chops', name:'Pork Chops',  brands:['Coles Brand','Woolworths Brand','Macro Organic','Aldi'] },
+      { id:'sausages_b', name:'Beef Sausages', brands:['Hans','Coles Brand','Woolworths Brand','Don'] },
+      { id:'sausages_p', name:'Pork Sausages', brands:['Hans','Coles Brand','Woolworths Brand','Don'] },
+    ]
+  },
+  {
+    name: 'Deli Meats', emoji: '🥓',
+    cats: [
+      { id:'bacon_mid',    name:'Bacon (Middle Rasher)', brands:['Coles Brand','Woolworths Brand','Hans','Don'] },
+      { id:'bacon_short',  name:'Bacon (Shortcut)',      brands:['Coles Brand','Woolworths Brand','Primo','Hans'] },
+      { id:'ham_leg',      name:'Ham (Leg)',             brands:['Coles Brand','Woolworths Brand','Hans','Don'] },
+      { id:'salami',       name:'Salami',               brands:['Bertocchi','Hans','Coles Brand','Woolworths Brand'] },
+      { id:'frankfurts',   name:'Frankfurts / Cheerios', brands:['Hans','Don','Coles Brand','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Seafood', emoji: '🐟',
+    cats: [
+      { id:'tuna_can',    name:'Canned Tuna',           brands:['John West','Greenseas','Sirena','Woolworths Brand'] },
+      { id:'salmon_can',  name:'Canned Salmon',          brands:['John West','Tassal','Coles Brand','Aldi'] },
+      { id:'sardines',    name:'Canned Sardines',        brands:['John West','Brunswick','Coles Brand','Aldi'] },
+      { id:'fish_frozen', name:'Frozen Fish Fillets',    brands:['Coles Brand','Woolworths Brand','I&J','Birds Eye'] },
+      { id:'prawns',      name:'Frozen Prawns',          brands:['Coles Brand','Woolworths Brand','Marine Harvest','Aldi'] },
+    ]
+  },
+  {
+    name: 'Canned & Jarred Vegetables', emoji: '🥫',
+    cats: [
+      { id:'can_diced_tom',  name:'Canned Diced Tomatoes',   brands:['Mutti','Ardmona','Coles Brand','Woolworths Brand'] },
+      { id:'can_crushed_tom',name:'Canned Crushed Tomatoes', brands:['Mutti','Ardmona','Coles Brand','Woolworths Brand'] },
+      { id:'tom_paste',      name:'Tomato Paste',            brands:['Leggo\'s','Mutti','Coles Brand','Woolworths Brand'] },
+      { id:'baked_beans',    name:'Baked Beans',             brands:['Heinz','Coles Brand','Woolworths Brand','Bush\'s'] },
+      { id:'can_chick',      name:'Canned Chickpeas',        brands:['Edgell','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'can_corn',       name:'Canned Corn',             brands:['Edgell','Green Giant','Coles Brand','Woolworths Brand'] },
+      { id:'can_kidney',     name:'Canned Kidney Beans',     brands:['Edgell','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'can_mushrooms',  name:'Canned Mushrooms',        brands:['Edgell','Coles Brand','Woolworths Brand','Aldi'] },
+    ]
+  },
+  {
+    name: 'Canned Fruit', emoji: '🍑',
+    cats: [
+      { id:'can_peaches',    name:'Canned Peaches',     brands:['SPC','Edgell','Coles Brand','Woolworths Brand'] },
+      { id:'can_pears',      name:'Canned Pears',       brands:['SPC','Edgell','Coles Brand','Woolworths Brand'] },
+      { id:'can_pineapple',  name:'Canned Pineapple',   brands:['Dole','SPC','Coles Brand','Woolworths Brand'] },
+      { id:'can_fruit_sal',  name:'Canned Fruit Salad', brands:['SPC','Coles Brand','Woolworths Brand','Aldi'] },
+    ]
+  },
+  {
+    name: 'Pasta Sauces', emoji: '🍝',
+    cats: [
+      { id:'sauce_tom',    name:'Pasta Sauce (Tomato/Napoli)', brands:['Leggo\'s','Dolmio','Barilla','Coles Brand'] },
+      { id:'sauce_pesto',  name:'Pasta Sauce (Pesto)',         brands:['Barilla','Sacla','Coles Brand','Woolworths Brand'] },
+      { id:'sauce_carb',   name:'Pasta Sauce (Carbonara)',     brands:['Dolmio','Leggo\'s','Coles Brand','Woolworths Brand'] },
+      { id:'sauce_arr',    name:'Pasta Sauce (Arrabbiata)',    brands:['Barilla','Sacla','Coles Brand','Woolworths Brand'] },
+      { id:'sauce_bolognese', name:'Pasta Sauce (Bolognese)', brands:['Dolmio','Leggo\'s','Barilla','Coles Brand'] },
+    ]
+  },
+  {
+    name: 'Condiments & Sauces', emoji: '🫙',
+    cats: [
+      { id:'tom_sauce',    name:'Tomato Sauce / Ketchup', brands:['Heinz','Rosella','MasterFoods','Coles Brand'] },
+      { id:'bbq_sauce',    name:'BBQ Sauce',              brands:['MasterFoods','Fountain','Coles Brand','Woolworths Brand'] },
+      { id:'soy_sauce',    name:'Soy Sauce',              brands:['Kikkoman','Lee Kum Kee','Chang\'s','Woolworths Brand'] },
+      { id:'mayo',         name:'Mayonnaise',             brands:['Hellmann\'s','S&W','Coles Brand','Woolworths Brand'] },
+      { id:'dijon',        name:'Dijon Mustard',          brands:['Maille','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'wg_mustard',   name:'Wholegrain Mustard',     brands:['Maille','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'worcs',        name:'Worcestershire Sauce',   brands:['Lea & Perrins','Holbrook\'s','Coles Brand','Woolworths Brand'] },
+      { id:'sweet_chilli', name:'Sweet Chilli Sauce',     brands:['MasterFoods','Trident','Coles Brand','Woolworths Brand'] },
+      { id:'hot_sauce',    name:'Hot Sauce',              brands:['Tabasco','Frank\'s RedHot','MasterFoods','Aldi'] },
+      { id:'oyster_sauce', name:'Oyster Sauce',           brands:['Lee Kum Kee','Chang\'s','Trident','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Spreads', emoji: '🥜',
+    cats: [
+      { id:'vegemite',   name:'Yeast Extract Spread', brands:['Vegemite','Marmite','Coles Brand','Bega Vegemite'] },
+      { id:'pnut_butter',name:'Peanut Butter',        brands:['Sanitarium','Mayver\'s','Coles Brand','Woolworths Brand'] },
+      { id:'alm_butter', name:'Almond Butter',        brands:['Mayver\'s','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'jam_straw',  name:'Jam (Strawberry)',     brands:['Bonne Maman','IXL','Coles Brand','Woolworths Brand'] },
+      { id:'jam_rasp',   name:'Jam (Raspberry)',      brands:['Bonne Maman','IXL','Coles Brand','Woolworths Brand'] },
+      { id:'honey',      name:'Honey',                brands:['Capilano','Beechworth Honey','Woolworths Brand','Aldi'] },
+      { id:'maple',      name:'Maple Syrup',          brands:['Canada True','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'nutella',    name:'Choc-Hazelnut Spread', brands:['Nutella','Aldi Nucella','Woolworths Brand','Coles Brand'] },
+    ]
+  },
+  {
+    name: 'Oils & Vinegars', emoji: '🫒',
+    cats: [
+      { id:'evoo',    name:'Extra Virgin Olive Oil', brands:['Cobram Estate','Bertolli','Lucias','Aldi'] },
+      { id:'veg_oil', name:'Vegetable / Canola Oil', brands:['Coles Brand','Woolworths Brand','Sunola','Aldi'] },
+      { id:'coc_oil', name:'Coconut Oil',            brands:['Nutu','Melrose','Coles Brand','Woolworths Brand'] },
+      { id:'vin_wht', name:'White Vinegar',          brands:['Cornwell\'s','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'vin_bals',name:'Balsamic Vinegar',       brands:['Mazzetti','Coles Brand','Aldi Specially Selected','Woolworths Brand'] },
+      { id:'vin_acv', name:'Apple Cider Vinegar',    brands:['Bragg','Melrose','Coles Brand','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Breakfast Cereals', emoji: '🥣',
+    cats: [
+      { id:'weetbix',      name:'Wheat Biscuits (Weet-Bix)', brands:['Sanitarium Weet-Bix','Woolworths Brand','Aldi','Weetabix'] },
+      { id:'cornflakes',   name:'Cornflakes',                brands:['Kellogg\'s','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'muesli',       name:'Muesli',                    brands:['Carman\'s','Brookfarm','Coles Brand','Aldi'] },
+      { id:'granola',      name:'Granola',                   brands:['Carman\'s','Brookfarm','Woolworths Brand','Aldi'] },
+      { id:'bran_flakes',  name:'Bran / All-Bran',           brands:['Kellogg\'s All-Bran','Uncle Tobys','Coles Brand','Aldi'] },
+      { id:'rice_bubbles', name:'Rice Puffs / Bubbles',      brands:['Kellogg\'s Rice Bubbles','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'nutrigrain',   name:'Honey / Toasted Oats',      brands:['Kellogg\'s Nutri-Grain','Uncle Tobys','Coles Brand','Aldi'] },
+      { id:'choc_cereal',  name:'Chocolate Cereal',          brands:['Kellogg\'s Coco Pops','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'porridge_sach',name:'Porridge Sachets',          brands:['Uncle Tobys','Lowan','Coles Brand','Aldi'] },
+      { id:'kids_cereal',  name:'Kids Cereal (Frosted/Rings)',brands:['Kellogg\'s Froot Loops','Kellogg\'s Frosties','Coles Brand','Aldi'] },
+    ]
+  },
+  {
+    name: 'Snacks', emoji: '🥔',
+    cats: [
+      { id:'chips_potato',name:'Potato Chips',       brands:['Smith\'s','Kettle','Red Rock Deli','Pringles'] },
+      { id:'chips_corn',  name:'Corn Chips',          brands:['Doritos','Mission','Woolworths Brand','Aldi'] },
+      { id:'rice_cracks', name:'Rice Crackers',       brands:['Sakata','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'popcorn',     name:'Popcorn',             brands:['Cobs','Smith\'s','Coles Brand','Woolworths Brand'] },
+      { id:'pretzels',    name:'Pretzels',            brands:['Snyder\'s','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'muesli_bars', name:'Muesli / Snack Bars', brands:['Carman\'s','Kellogg\'s','Uncle Tobys','Coles Brand'] },
+      { id:'nut_mix',     name:'Nut Mix / Trail Mix', brands:['Coles Brand','Woolworths Brand','Aldi','Wonderful'] },
+      { id:'dried_fruit', name:'Dried Fruit',         brands:['Sunbeam','Coles Brand','Woolworths Brand','Aldi'] },
+    ]
+  },
+  {
+    name: 'Biscuits & Sweet', emoji: '🍪',
+    cats: [
+      { id:'choc_biscuits',  name:'Chocolate Biscuits (Tim Tams)', brands:['Arnott\'s Tim Tams','Arnott\'s','Coles Brand','Aldi Choco'] },
+      { id:'plain_biscuits', name:'Plain Sweet Biscuits',          brands:['Arnott\'s Scotch Fingers','Arnott\'s','Coles Brand','Aldi'] },
+      { id:'cream_biscuits', name:'Cream Biscuits',                brands:['Arnott\'s Oreo','Arnott\'s Kingston','Coles Brand','Aldi'] },
+      { id:'sav_crackers',   name:'Savoury Crackers (SAOs/Jatz)',  brands:['Jatz','Vita-Weat','SAOs','Coles Brand'] },
+      { id:'rice_cakes',     name:'Rice Cakes',                    brands:['SunRice','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'shortbread',     name:'Shortbread',                    brands:['Walkers','Coles Brand','Woolworths Brand','Aldi'] },
+    ]
+  },
+  {
+    name: 'Chocolate & Confectionery', emoji: '🍫',
+    cats: [
+      { id:'choc_milk',  name:'Milk Chocolate Block',    brands:['Cadbury','Lindt','Kit Kat','Aldi Choceur'] },
+      { id:'choc_dark',  name:'Dark Chocolate Block',    brands:['Lindt','Cadbury Bournville','Green & Black\'s','Aldi Moser Roth'] },
+      { id:'choc_white', name:'White Chocolate Block',   brands:['Lindt','Cadbury','Nestle','Aldi Choceur'] },
+      { id:'choc_cook',  name:'Cooking / Baking Choc',  brands:['Plaistowe','Nestle','Cadbury Baking','Woolworths Brand'] },
+      { id:'lollies',    name:'Lollies / Gummies',       brands:['Haribo','Allen\'s','Woolworths Brand','Aldi'] },
+      { id:'mints',      name:'Mints / Hard Candy',      brands:['Minties','PK','Coles Brand','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Drinks — Juice & Soft Drink', emoji: '🧃',
+    cats: [
+      { id:'juice_oj',   name:'Orange Juice',   brands:['Tropicana','Golden Circle','Coles Brand','Woolworths Brand'] },
+      { id:'juice_apple',name:'Apple Juice',    brands:['Golden Circle','Berri','Coles Brand','Woolworths Brand'] },
+      { id:'cordial',    name:'Cordial',        brands:['Cottee\'s','Bickford\'s','Woolworths Brand','Coles Brand'] },
+      { id:'sparkling',  name:'Sparkling Water', brands:['Mount Franklin','Coles Brand','San Pellegrino','Woolworths Brand'] },
+      { id:'still_water',name:'Bottled Water',  brands:['Mount Franklin','PUMP','Woolworths Brand','Coles Brand'] },
+      { id:'cola',       name:'Cola',           brands:['Coca-Cola','Pepsi','Coles Brand','Woolworths Brand'] },
+      { id:'lemonade',   name:'Lemonade',       brands:['Schweppes','Sprite','Coles Brand','Woolworths Brand'] },
+      { id:'sports_drink',name:'Sports Drink',  brands:['Powerade','Gatorade','Coles Brand','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Drinks — Coffee & Tea', emoji: '☕',
+    cats: [
+      { id:'coffee_inst',  name:'Instant Coffee',    brands:['Nescafé','Moccona','Woolworths Brand','Aldi'] },
+      { id:'coffee_ground',name:'Ground Coffee',     brands:['Lavazza','Campos','Vittoria','Woolworths Brand'] },
+      { id:'coffee_pods',  name:'Coffee Pods',       brands:['Nespresso','L\'Or','Vittoria','Aldi Expressi'] },
+      { id:'tea_black',    name:'Black Tea (bags)',   brands:['Dilmah','Tetley','Lipton','Woolworths Brand'] },
+      { id:'tea_herbal',   name:'Herbal Tea',        brands:['Pukka','Twinings','T2','Woolworths Brand'] },
+      { id:'tea_green',    name:'Green Tea',         brands:['Twinings','Dilmah','T2','Woolworths Brand'] },
+      { id:'milo',         name:'Milo / Hot Chocolate',brands:['Milo','Cadbury Drinking Choc','Woolworths Brand','Aldi'] },
+    ]
+  },
+  {
+    name: 'Frozen', emoji: '🧊',
+    cats: [
+      { id:'froz_peas',   name:'Frozen Peas',             brands:['Birds Eye','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'froz_mix_veg',name:'Frozen Mixed Vegetables',  brands:['Birds Eye','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'froz_chips',  name:'Frozen Chips / Fries',     brands:['McCain','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'froz_pizza',  name:'Frozen Pizza',             brands:['Dr. Oetker','Coles Brand','Woolworths Brand','Aldi Mama Cozzi'] },
+      { id:'froz_dimsims',name:'Frozen Dim Sims / Spring Rolls',brands:['Wing\'s','Woolworths Brand','Coles Brand','Chefs Pride'] },
+      { id:'froz_berries',name:'Frozen Berries',           brands:['Creative Gourmet','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'froz_stirfry',name:'Frozen Stir-Fry Vegetables',brands:['Birds Eye','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'froz_meals',  name:'Frozen Ready Meals',       brands:['Lean Cuisine','Healthy Choice','Coles Brand','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Baking', emoji: '🎂',
+    cats: [
+      { id:'flour_plain', name:'Plain Flour',       brands:['White Wings','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'flour_sr',    name:'Self-Raising Flour', brands:['White Wings','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'flour_wm',    name:'Wholemeal Flour',    brands:['White Wings','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'sugar_caster',name:'Caster Sugar',       brands:['CSR','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'sugar_brown', name:'Brown Sugar',        brands:['CSR','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'sugar_icing', name:'Icing Sugar',        brands:['CSR','White Wings','Coles Brand','Woolworths Brand'] },
+      { id:'cocoa',       name:'Cocoa Powder',       brands:['Dutchmasters','Cadbury Baking','Coles Brand','Woolworths Brand'] },
+      { id:'baking_pwd',  name:'Baking Powder',      brands:['McKenzie\'s','White Wings','Coles Brand','Woolworths Brand'] },
+      { id:'vanilla',     name:'Vanilla Extract',    brands:['Queen','McKenzie\'s','Coles Brand','Woolworths Brand'] },
+      { id:'bread_mix',   name:'Bread Mix',          brands:['Defiance','Coles Brand','Woolworths Brand','Aldi'] },
+    ]
+  },
+  {
+    name: 'Spices & Herbs', emoji: '🌿',
+    cats: [
+      { id:'spice_mixed',  name:'Mixed Herbs',    brands:['MasterFoods','McCormick','Coles Brand','Woolworths Brand'] },
+      { id:'spice_paprika',name:'Paprika',        brands:['MasterFoods','McCormick','Coles Brand','Woolworths Brand'] },
+      { id:'spice_cumin',  name:'Cumin',          brands:['MasterFoods','McCormick','Coles Brand','Woolworths Brand'] },
+      { id:'spice_turmeric',name:'Turmeric',      brands:['MasterFoods','McCormick','Coles Brand','Woolworths Brand'] },
+      { id:'spice_cinnamon',name:'Cinnamon',      brands:['MasterFoods','McCormick','Coles Brand','Woolworths Brand'] },
+      { id:'spice_chilli', name:'Chilli Flakes',  brands:['MasterFoods','McCormick','Coles Brand','Woolworths Brand'] },
+      { id:'spice_garlic', name:'Garlic Powder',  brands:['MasterFoods','McCormick','Coles Brand','Woolworths Brand'] },
+      { id:'spice_curry',  name:'Curry Powder',   brands:['MasterFoods','McCormick','Coles Brand','Woolworths Brand'] },
+      { id:'stock_chk',    name:'Chicken Stock',  brands:['Massel','Campbell\'s','Coles Brand','Woolworths Brand'] },
+      { id:'stock_veg',    name:'Vegetable Stock', brands:['Massel','Campbell\'s','Coles Brand','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Asian & International', emoji: '🌏',
+    cats: [
+      { id:'coconut_milk',  name:'Coconut Milk (Canned)',    brands:['Ayam','Trident','Coles Brand','Woolworths Brand'] },
+      { id:'coconut_cream', name:'Coconut Cream (Canned)',   brands:['Ayam','Trident','Coles Brand','Woolworths Brand'] },
+      { id:'curry_paste',   name:'Curry Paste (Red/Green)',  brands:['Maesri','Valcom','Coles Brand','Woolworths Brand'] },
+      { id:'fish_sauce',    name:'Fish Sauce',               brands:['Tiparos','Squid Brand','Trident','Woolworths Brand'] },
+      { id:'hoisin',        name:'Hoisin Sauce',             brands:['Lee Kum Kee','Chang\'s','Coles Brand','Woolworths Brand'] },
+      { id:'sriracha',      name:'Sriracha / Chilli Sauce',  brands:['Huy Fong','MasterFoods','Coles Brand','Woolworths Brand'] },
+      { id:'miso',          name:'Miso Paste',               brands:['Spiral','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'tahini',        name:'Tahini',                   brands:['Mayver\'s','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'hummus',        name:'Hummus',                   brands:['Chris\' Hummus','Coles Brand','Woolworths Brand','Aldi'] },
+      { id:'naan',          name:'Naan Bread',               brands:['Mission','Coles Brand','Woolworths Brand','Aldi'] },
+    ]
+  },
+  {
+    name: 'Nuts & Seeds', emoji: '🌰',
+    cats: [
+      { id:'nuts_almond',  name:'Almonds',          brands:['Coles Brand','Woolworths Brand','Aldi','Wonderful'] },
+      { id:'nuts_cashew',  name:'Cashews',           brands:['Coles Brand','Woolworths Brand','Aldi','Wonderful'] },
+      { id:'nuts_walnut',  name:'Walnuts',           brands:['Coles Brand','Woolworths Brand','Aldi','Wonderful'] },
+      { id:'nuts_peanut',  name:'Peanuts (Roasted)', brands:['Coles Brand','Woolworths Brand','Aldi','Wonderful'] },
+      { id:'seeds_chia',   name:'Chia Seeds',        brands:['Coles Brand','Woolworths Brand','Melrose','Aldi'] },
+      { id:'seeds_sunflwr',name:'Sunflower Seeds',   brands:['Coles Brand','Woolworths Brand','Aldi','Melrose'] },
+    ]
+  },
+  {
+    name: 'Baby & Kids', emoji: '👶',
+    cats: [
+      { id:'baby_formula', name:'Baby Formula',        brands:['Bellamy\'s','NAN','Aptamil','Karicare'] },
+      { id:'baby_food',    name:'Baby Food (Pouches)',  brands:['Rafferty\'s Garden','Heinz','Bellamy\'s','Coles Brand'] },
+      { id:'baby_rice',    name:'Baby Rice Cereal',     brands:['Heinz','Nestlé','Bellamy\'s','Coles Brand'] },
+      { id:'kids_yogurt_pouch',name:'Kids Yogurt Pouches',brands:['Vaalia','Chobani','Coles Brand','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Health & Wellness', emoji: '💊',
+    cats: [
+      { id:'protein_bar',    name:'Protein Bar',        brands:['Quest','Aussie Bodies','Coles Brand','Woolworths Brand'] },
+      { id:'protein_powder', name:'Protein Powder',     brands:['Optimum Nutrition','BSc','Coles Brand','Aldi'] },
+      { id:'vitamins',       name:'Multivitamins',      brands:['Centrum','Nature\'s Own','Blackmores','Aldi'] },
+      { id:'collagen',       name:'Collagen Supplement',brands:['Nutra-Life','Swisse','Coles Brand','Woolworths Brand'] },
+    ]
+  },
+  {
+    name: 'Cleaning & Household', emoji: '🧹',
+    cats: [
+      { id:'dishwash_liquid',name:'Dishwashing Liquid',  brands:['Morning Fresh','Fairy','Coles Brand','Woolworths Brand'] },
+      { id:'dishwash_tabs',  name:'Dishwasher Tablets',  brands:['Finish','Fairy','Coles Brand','Woolworths Brand'] },
+      { id:'laundry_liq',   name:'Laundry Liquid',       brands:['OMO','Cold Power','Coles Brand','Woolworths Brand'] },
+      { id:'laundry_pods',  name:'Laundry Pods',         brands:['OMO','Dynamo','Finish','Coles Brand'] },
+      { id:'spray_cleaner', name:'Surface Spray Cleaner',brands:['Glen 20','Mr Muscle','Coles Brand','Woolworths Brand'] },
+      { id:'toilet_paper',  name:'Toilet Paper',         brands:['Quilton','Sorbent','Coles Brand','Woolworths Brand'] },
+      { id:'paper_towel',   name:'Paper Towel',          brands:['Viva','Quilton','Coles Brand','Woolworths Brand'] },
+      { id:'bin_liners',    name:'Bin Liners',            brands:['Glad','Coles Brand','Woolworths Brand','Aldi'] },
+    ]
+  },
+];
+
+// Flatten
+const allCats = [];
+for (const g of groups) {
+  for (const c of g.cats) {
+    allCats.push({ ...c, groupName: g.name, groupEmoji: g.emoji });
+  }
+}
+
+// State
+let prefs = {};
+let view = 'summary'; // 'summary' | 'detail'
+let detailIndex = 0;
+
+function loadPrefs() {
+  try { prefs = JSON.parse(localStorage.getItem('foodPrefs2') || '{}'); } catch(e) {}
+}
+function savePrefs() {
+  localStorage.setItem('foodPrefs2', JSON.stringify(prefs));
+}
+function countSet() { return allCats.filter(c => prefs[c.id]).length; }
+
+// ── Render ────────────────────────────────────────────────────────────────
+function render() {
+  updateHeader();
+  if (view === 'summary') renderSummary();
+  else renderDetail();
+}
+
+function updateHeader() {
+  const n = countSet();
+  const total = allCats.length;
+  document.getElementById('hdrSub').textContent = `${n} of ${total} categories set`;
+  const pct = n / total;
+  document.getElementById('progFill').style.width = (pct * 100) + '%';
+  const circ = 2 * Math.PI * 18; // 113.1
+  document.getElementById('ringFill').style.strokeDashoffset = circ * (1 - pct);
+}
+
+function renderSummary() {
+  document.getElementById('searchContainer').style.display = '';
+  const q = (document.getElementById('searchBox')?.value || '').toLowerCase();
+
+  let html = '';
+  let visibleCount = 0;
+
+  for (const g of groups) {
+    const filtered = g.cats.filter(c => !q || c.name.toLowerCase().includes(q) || g.name.toLowerCase().includes(q));
+    if (!filtered.length) continue;
+    visibleCount += filtered.length;
+
+    html += `<div class="group-label">${g.emoji} ${g.name}</div><div class="cat-grid">`;
+    for (const c of filtered) {
+      const p = prefs[c.id];
+      const isSpecial = p === SPECIAL;
+      const isSet = !!p;
+      const pickLabel = isSpecial ? SPECIAL_LABEL : (p || '—');
+      const idx = allCats.findIndex(x => x.id === c.id);
+      html += `
+        <div class="cat-tile ${isSpecial ? 'is-special' : (isSet ? 'is-set' : '')}" onclick="openDetail(${idx})">
+          <div class="t-emoji">${g.emoji}</div>
+          <div class="t-name">${c.name}</div>
+          <div class="t-pick">${pickLabel}</div>
+        </div>`;
+    }
+    html += '</div>';
+  }
+
+  if (!visibleCount) html = '<div class="no-results">No categories match your search.</div>';
+  document.getElementById('app').innerHTML = html;
+}
+
+function renderDetail() {
+  document.getElementById('searchContainer').style.display = 'none';
+  const cat = allCats[detailIndex];
+  const sel = prefs[cat.id];
+  const isFirst = detailIndex === 0;
+  const isLast = detailIndex === allCats.length - 1;
+
+  let brandsHtml = '';
+  for (const b of cat.brands) {
+    const isSel = sel === b;
+    brandsHtml += `
+      <div class="brand-tile ${isSel ? 'selected' : ''}" onclick="pickBrand('${cat.id}', ${JSON.stringify(b)})">
+        ${b}
+      </div>`;
+  }
+  // Special option
+  const isSpecialSel = sel === SPECIAL;
+  brandsHtml += `
+    <div class="brand-tile special-tile ${isSpecialSel ? 'selected' : ''}" onclick="pickBrand('${cat.id}', '${SPECIAL}')">
+      <div class="sp-icon">🏷️</div>
+      No preference —<br>whatever is on special
+    </div>`;
+
+  document.getElementById('app').innerHTML = `
+    <div class="detail-view">
+      <div class="detail-nav">
+        <button class="btn-back" onclick="goSummary()">← All categories</button>
+        <span class="nav-counter">${detailIndex + 1} / ${allCats.length}</span>
+      </div>
+      <div class="detail-head">
+        <div class="d-emoji">${cat.groupEmoji}</div>
+        <div class="d-name">${cat.name}</div>
+        <div class="d-group">${cat.groupName}</div>
+      </div>
+      <div class="brand-grid">${brandsHtml}</div>
+      <div class="detail-nav-btns">
+        <button class="btn-pn btn-prev" onclick="prevCat()" ${isFirst ? 'disabled' : ''}>← Prev</button>
+        <button class="btn-pn ${isLast ? 'btn-done' : 'btn-next'}" onclick="${isLast ? 'goSummary()' : 'nextCat()'}">
+          ${isLast ? 'Done ✓' : 'Next →'}
+        </button>
+      </div>
+    </div>`;
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────
+function pickBrand(catId, brand) {
+  prefs[catId] = brand;
+  savePrefs();
+  updateHeader();
+  // Re-render just the brand grid tiles without full page refresh
+  const cat = allCats.find(c => c.id === catId);
+  document.querySelectorAll('.brand-tile').forEach(tile => {
+    tile.classList.remove('selected');
+  });
+  // find by content matching
+  document.querySelectorAll('.brand-tile').forEach(tile => {
+    const isSpecialTile = tile.classList.contains('special-tile');
+    if (isSpecialTile && brand === SPECIAL) tile.classList.add('selected');
+    else if (!isSpecialTile && tile.textContent.trim() === brand) tile.classList.add('selected');
+  });
+
+  // Auto-advance after 400ms if not last
+  if (detailIndex < allCats.length - 1) {
+    setTimeout(() => { nextCat(); }, 420);
+  }
+}
+
+function openDetail(i) {
+  detailIndex = i;
+  view = 'detail';
+  render();
+  window.scrollTo(0, 0);
+}
+
+function goSummary() {
+  view = 'summary';
+  render();
+  window.scrollTo(0, 0);
+}
+
+function nextCat() {
+  if (detailIndex < allCats.length - 1) {
+    detailIndex++;
+    render();
+    window.scrollTo(0, 0);
+  }
+}
+
+function prevCat() {
+  if (detailIndex > 0) {
+    detailIndex--;
+    render();
+    window.scrollTo(0, 0);
+  }
+}
+
+function resetAll() {
+  if (!confirm('Reset all preferences? This cannot be undone.')) return;
+  prefs = {};
+  savePrefs();
+  render();
+  toast('All preferences cleared');
+}
+
+function exportPrefs() {
+  const lines = allCats.map(c => {
+    const p = prefs[c.id];
+    const label = p === SPECIAL ? 'Whatever is on special' : (p || 'Not set');
+    return `${c.groupName} — ${c.name}: ${label}`;
+  });
+  const text = lines.join('\n');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => toast('Copied to clipboard!'));
+  } else {
+    const ta = Object.assign(document.createElement('textarea'), { value: text });
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    toast('Copied to clipboard!');
+  }
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+loadPrefs();
+render();
+</script>
+</body>
+</html>
