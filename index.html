@@ -251,6 +251,50 @@
     .btn-done { background: var(--orange); color: #fff; }
     .btn-done:hover { background: #c0622a; }
 
+    /* ── Custom brand input ── */
+    .custom-brand-wrap {
+      margin-top: 14px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .custom-brand-input {
+      flex: 1;
+      padding: 13px 16px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      font-family: inherit;
+      background: var(--card);
+      outline: none;
+      transition: border-color 0.15s;
+      color: var(--text);
+    }
+    .custom-brand-input:focus { border-color: var(--green-light); }
+    .custom-brand-input.has-custom { border-color: var(--green); background: var(--green-bg); font-weight: 600; }
+    .custom-brand-btn {
+      padding: 13px 18px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .custom-brand-btn:hover { background: #245c42; }
+    .custom-brand-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-top: 14px;
+      margin-bottom: 4px;
+    }
+
     /* ── Name screen ── */
     .name-screen {
       position: fixed; inset: 0;
@@ -870,6 +914,9 @@ function renderDetail() {
   const isFirst = detailIndex === 0;
   const isLast = detailIndex === allCats.length - 1;
 
+  // Detect if current selection is a custom (user-typed) entry
+  const isCustom = sel && sel !== SPECIAL && !cat.brands.includes(sel);
+
   let brandsHtml = '';
   for (const b of cat.brands) {
     const isSel = sel === b;
@@ -898,6 +945,19 @@ function renderDetail() {
         <div class="d-group">${cat.groupName}</div>
       </div>
       <div class="brand-grid">${brandsHtml}</div>
+      <div class="custom-brand-label">Or type your own brand</div>
+      <div class="custom-brand-wrap">
+        <input
+          class="custom-brand-input ${isCustom ? 'has-custom' : ''}"
+          id="customBrandInput"
+          type="text"
+          placeholder="e.g. Harris Farm, Costco..."
+          maxlength="60"
+          value="${isCustom ? sel.replace(/"/g, '&quot;') : ''}"
+          onkeydown="if(event.key==='Enter') pickCustomBrand('${cat.id}')"
+        >
+        <button class="custom-brand-btn" onclick="pickCustomBrand('${cat.id}')">Use this</button>
+      </div>
       <div class="detail-nav-btns">
         <button class="btn-pn btn-prev" onclick="prevCat()" ${isFirst ? 'disabled' : ''}>← Prev</button>
         <button class="btn-pn ${isLast ? 'btn-done' : 'btn-next'}" onclick="${isLast ? 'goSummary()' : 'nextCat()'}">
@@ -927,6 +987,22 @@ function pickBrand(catId, brand) {
   // Auto-advance after 400ms if not last
   if (detailIndex < allCats.length - 1) {
     setTimeout(() => { nextCat(); }, 420);
+  }
+}
+
+function pickCustomBrand(catId) {
+  const val = (document.getElementById('customBrandInput')?.value || '').trim();
+  if (!val) { document.getElementById('customBrandInput')?.focus(); return; }
+  prefs[catId] = val;
+  savePrefs();
+  updateHeader();
+  // Deselect all brand tiles and highlight the input
+  document.querySelectorAll('.brand-tile').forEach(t => t.classList.remove('selected'));
+  const input = document.getElementById('customBrandInput');
+  if (input) input.classList.add('has-custom');
+  toast(`Saved: ${val}`);
+  if (detailIndex < allCats.length - 1) {
+    setTimeout(() => { nextCat(); }, 500);
   }
 }
 
