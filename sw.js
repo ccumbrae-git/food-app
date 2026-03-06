@@ -1,4 +1,4 @@
-const CACHE = 'food-prefs-v1';
+const CACHE = 'food-prefs-v2';
 const ASSETS = ['/', '/index.html', '/icon.svg', '/manifest.json'];
 
 self.addEventListener('install', e => {
