@@ -139,8 +139,10 @@
     .cat-tile .t-emoji { font-size: 1.4rem; }
     .cat-tile .t-name  { font-size: 0.8rem; font-weight: 700; margin: 4px 0 2px; line-height: 1.2; }
     .cat-tile .t-pick  { font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cat-tile.is-set   .t-pick { color: var(--green); font-weight: 600; }
-    .cat-tile.is-special .t-pick { color: var(--orange); font-weight: 600; }
+    .cat-tile.is-set      .t-pick { color: var(--green); font-weight: 600; }
+    .cat-tile.is-special  .t-pick { color: var(--orange); font-weight: 600; }
+    .cat-tile.is-dontbuy  { border-color: #e8d5d3; }
+    .cat-tile.is-dontbuy  .t-pick { color: #c0392b; font-weight: 600; }
 
     .no-results { text-align: center; padding: 60px 0; color: #bbb; font-size: 0.95rem; }
 
@@ -229,6 +231,23 @@
     }
     .brand-tile.special-tile.selected::after { color: var(--orange); }
     .brand-tile.special-tile .sp-icon { font-size: 1.2rem; margin-bottom: 4px; }
+
+    .brand-tile.dontbuy-tile {
+      border-style: dashed;
+      border-color: #ccc;
+      color: #999;
+      font-size: 0.82rem;
+      background: #fafafa;
+    }
+    .brand-tile.dontbuy-tile:hover { background: #f5f0f0; border-color: #c0392b; border-style: solid; color: #c0392b; }
+    .brand-tile.dontbuy-tile.selected {
+      border-color: #c0392b;
+      border-style: solid;
+      background: #fdf0ee;
+      color: #c0392b;
+    }
+    .brand-tile.dontbuy-tile.selected::after { color: #c0392b; }
+    .brand-tile.dontbuy-tile .db-icon { font-size: 1.2rem; margin-bottom: 4px; }
 
     .detail-nav-btns {
       display: flex;
@@ -386,6 +405,8 @@
 <script>
 const SPECIAL = '__special__';
 const SPECIAL_LABEL = "Whatever's on special";
+const DONTBUY = '__dontbuy__';
+const DONTBUY_LABEL = "We don't buy this";
 
 // ── Data ──────────────────────────────────────────────────────────────────
 const groups = [
@@ -890,11 +911,12 @@ function renderSummary() {
     for (const c of filtered) {
       const p = prefs[c.id];
       const isSpecial = p === SPECIAL;
+      const isDontBuy = p === DONTBUY;
       const isSet = !!p;
-      const pickLabel = isSpecial ? SPECIAL_LABEL : (p || '—');
+      const pickLabel = isSpecial ? SPECIAL_LABEL : isDontBuy ? DONTBUY_LABEL : (p || '—');
       const idx = allCats.findIndex(x => x.id === c.id);
       html += `
-        <div class="cat-tile ${isSpecial ? 'is-special' : (isSet ? 'is-set' : '')}" onclick="openDetail(${idx})">
+        <div class="cat-tile ${isSpecial ? 'is-special' : isDontBuy ? 'is-dontbuy' : (isSet ? 'is-set' : '')}" onclick="openDetail(${idx})">
           <div class="t-emoji">${g.emoji}</div>
           <div class="t-name">${c.name}</div>
           <div class="t-pick">${pickLabel}</div>
@@ -931,6 +953,14 @@ function renderDetail() {
     <div class="brand-tile special-tile ${isSpecialSel ? 'selected' : ''}" onclick="pickBrand('${cat.id}', '${SPECIAL}')">
       <div class="sp-icon">🏷️</div>
       No preference —<br>whatever is on special
+    </div>`;
+
+  // Don't buy option
+  const isDontBuySel = sel === DONTBUY;
+  brandsHtml += `
+    <div class="brand-tile dontbuy-tile ${isDontBuySel ? 'selected' : ''}" onclick="pickBrand('${cat.id}', '${DONTBUY}')">
+      <div class="db-icon">🚫</div>
+      We don't buy this —<br>not relevant
     </div>`;
 
   document.getElementById('app').innerHTML = `
@@ -1050,7 +1080,7 @@ function exportPrefs() {
     '',
     ...allCats.map(c => {
       const p = prefs[c.id];
-      const label = p === SPECIAL ? 'Whatever is on special' : (p || 'Not set');
+      const label = p === SPECIAL ? 'Whatever is on special' : p === DONTBUY ? "We don't buy this" : (p || 'Not set');
       return `${c.groupName} — ${c.name}: ${label}`;
     })
   ];
