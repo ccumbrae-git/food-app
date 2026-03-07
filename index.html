@@ -943,7 +943,7 @@ function renderDetail() {
   for (const b of cat.brands) {
     const isSel = sel === b;
     brandsHtml += `
-      <div class="brand-tile ${isSel ? 'selected' : ''}" onclick="pickBrand('${cat.id}', ${JSON.stringify(b)})">
+      <div class="brand-tile ${isSel ? 'selected' : ''}" onclick="pickBrand('${cat.id}', '${b.replace(/'/g, "\\'")}')">
         ${b}
       </div>`;
   }
