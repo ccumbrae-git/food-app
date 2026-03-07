@@ -1002,21 +1002,10 @@ function pickBrand(catId, brand) {
   prefs[catId] = brand;
   savePrefs();
   updateHeader();
-  // Re-render just the brand grid tiles without full page refresh
-  const cat = allCats.find(c => c.id === catId);
-  document.querySelectorAll('.brand-tile').forEach(tile => {
-    tile.classList.remove('selected');
-  });
-  // find by content matching
-  document.querySelectorAll('.brand-tile').forEach(tile => {
-    const isSpecialTile = tile.classList.contains('special-tile');
-    if (isSpecialTile && brand === SPECIAL) tile.classList.add('selected');
-    else if (!isSpecialTile && tile.textContent.trim() === brand) tile.classList.add('selected');
-  });
-
-  // Auto-advance after 400ms if not last
+  // Re-render immediately so the selected tile highlights, then advance
+  renderDetail();
   if (detailIndex < allCats.length - 1) {
-    setTimeout(() => { nextCat(); }, 420);
+    setTimeout(() => { nextCat(); }, 500);
   }
 }
 
@@ -1026,11 +1015,7 @@ function pickCustomBrand(catId) {
   prefs[catId] = val;
   savePrefs();
   updateHeader();
-  // Deselect all brand tiles and highlight the input
-  document.querySelectorAll('.brand-tile').forEach(t => t.classList.remove('selected'));
-  const input = document.getElementById('customBrandInput');
-  if (input) input.classList.add('has-custom');
-  toast(`Saved: ${val}`);
+  renderDetail();
   if (detailIndex < allCats.length - 1) {
     setTimeout(() => { nextCat(); }, 500);
   }
